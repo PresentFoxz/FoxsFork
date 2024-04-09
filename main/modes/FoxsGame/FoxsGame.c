@@ -1,10 +1,10 @@
 #include "FoxsGame.h"
 #include "esp_random.h"
 
-int16_t x = 0;
-int16_t y = 0;
-int16_t count = 0;
-uint16_t btnState;
+double xVel = 0; double yVel = 0;
+double x = 0; double y = 0; 
+int16_t falling = 0;
+int16_t count = 0; uint16_t btnState;
 
 
 static const char foxName[]  = "Fox";
@@ -44,25 +44,81 @@ static void foxExitMode(void)
 
 static void draw()
 {
-    drawRect(x, y, 45, 45, c050);
-    fillDisplayArea(0, 0, 45, 220, c554);
+    int16_t xPos = (int)x;
+    int16_t yPos = (int)y;
+    fillDisplayArea(0, 0, 280, 240, c554);
+    fillDisplayArea(xPos, yPos, 45 + xPos, 45 + yPos, c050);
 }
 
-static void player(int16_t x, int16_t y)
+static void movement(double speed, double friction, double g)
 {
     buttonEvt_t evt;
-    if (evt.state & PB_UP)
+    while (checkButtonQueueWrapper(&evt))
     {
-        y += 5;
+        btnState = evt.state;
+        printf("state: %04X, button: %d, down: %s\n",
+               evt.state, evt.button, evt.down ? "down" : "up");
     }
-    else if (evt.state & PB_DOWN)
+
+    if (xVel > 0)
     {
-        y -= 5;
+        xVel -= friction;
+        if (xVel < 0)
+            xVel = 0;
     }
+    else if (xVel < 0)
+    {
+        xVel += friction;
+        if (xVel > 0)
+            xVel = 0;
+    }
+    if (xVel > 3){
+        xVel = 3;
+    }
+    else if (xVel < -3){
+        xVel = -3;
+    }
+
+    if (btnState & PB_RIGHT)
+    {
+        xVel += speed;
+    }
+    if (btnState & PB_LEFT)
+    {
+        xVel -= speed;
+    }
+    if (btnState & PB_A && falling < 2)
+    {
+        y -= 1;
+        yVel = -8.2;
+    }
+
+    if (btnState & PB_B)
+    {
+        x = 0;
+        y = 0;
+        xVel = 0;
+        yVel = 0;
+    }
+
+    falling++;
+    if (y >= 100)
+    {
+        y = 100;
+        yVel = 0;
+        falling = 0;
+    }
+    else
+    {
+        yVel += g;
+    }
+
+    y += yVel;
+    x += xVel;
 }
 
 static void foxMainLoop(int64_t elapsedUs)
 {
-    player(x, y);
+    movement(0.8, 0.3, 0.8);
     draw();
 }
