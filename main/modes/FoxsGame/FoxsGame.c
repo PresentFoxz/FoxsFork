@@ -52,8 +52,11 @@ static void draw3D(double x1, double y1, double z1, double x2, double y2, double
 
     if(z1 > 30 || z2 > 30)
     {
-        drawLineFast((int)(center_x + x1*(DTS/(z1 + 0.01))),(int)(center_y + y1*(DTS/(z1 + 0.01))), (int)(center_x + x2*(DTS/(z2 + 0.01))), (int)(center_y + y1*(DTS/(z2 + 0.01))), c555);
-        drawLineFast((int)(center_x + x1*(DTS/(z1 + 0.01))),(int)(center_y + y2*(DTS/(z1 + 0.01))), (int)(center_x + x2*(DTS/(z2 + 0.01))), (int)(center_y + y2*(DTS/(z2 + 0.01))), c555);
+        drawLineFast((int)(center_x + x1*(DTS/(z1 + 0.01))),(int)(center_y + y1*(DTS/(z1 + 0.01)) - 20), (int)(center_x + x2*(DTS/(z2 + 0.01))), (int)(center_y + y1*(DTS/(z2 + 0.01)) - 20), c555);
+        drawLineFast((int)(center_x + x1*(DTS/(z1 + 0.01))),(int)(center_y + y2*(DTS/(z1 + 0.01)) - 20), (int)(center_x + x2*(DTS/(z2 + 0.01))), (int)(center_y + y2*(DTS/(z2 + 0.01)) - 20), c555);
+
+        drawLineFast((int)(center_x + x1*(DTS/(z1 + 0.01))),(int)(center_y + y1*(DTS/(z1 + 0.01)) - 20), (int)(center_x + x1*(DTS/(z1 + 0.01))), (int)(center_y + y2*(DTS/(z1 + 0.01)) - 20), c555);
+        drawLineFast((int)(center_x + x2*(DTS/(z2 + 0.01))),(int)(center_y + y1*(DTS/(z2 + 0.01)) - 20), (int)(center_x + x2*(DTS/(z2 + 0.01))), (int)(center_y + y2*(DTS/(z2 + 0.01)) - 20), c555);
     }
 }
 
@@ -188,16 +191,14 @@ static void foxMainLoop(int64_t elapsedUs)
         loadFont("ibm_vga8.font", &ibm, false);
         runner = false;
     }
-    int listInt = 0;
     fillDisplayArea(0, 0, 280, 240, c000);
     fillDisplayArea(0, ((int)sinf(0 - P.CamXDir) * DTS / cosf(0 - P.CamXDir)), 280, 240, c000);
 
     for(int z = 0; z < wallAmt; z++)
     {
-        myXRot(walls[listInt][0][0] - P.camX, walls[listInt][2][0] - P.camZ, walls[listInt][0][1] - P.camX, walls[listInt][2][1] - P.camZ, 0 - P.CamYDir);
-        myYRot(walls[listInt][1][0] - P.camY, zRot1, walls[listInt][1][1] - P.camY, zRot2, 0 - P.CamXDir);
+        myXRot(walls[z][0][0] - P.camX, walls[z][2][0] - P.camZ, walls[z][0][1] - P.camX, walls[z][2][1] - P.camZ, 0 - P.CamYDir);
+        myYRot(walls[z][1][0] - P.camY, zRot1, walls[z][1][1] - P.camY, zRot2, 0 - P.CamXDir);
         draw3D(xRot1, yRot1, zRot1, xRot2, yRot2, zRot2);
-        listInt += 2;
     }
 
     move();
