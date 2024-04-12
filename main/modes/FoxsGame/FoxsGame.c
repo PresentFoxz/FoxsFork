@@ -1,5 +1,15 @@
 #include "FoxsGame.h"
+<<<<<<< HEAD
 #include <math.h>
+=======
+#include "esp_random.h"
+
+double xVel = 0; double yVel = 0;
+double x = 0; double y = 0; 
+int16_t falling = 0;
+int16_t count = 0; uint16_t btnState;
+
+>>>>>>> 6df04aee689e5e801591fe76f86ab25d58079214
 
 static const char foxName[]  = "Fox";
 static void foxMainLoop(int64_t elapsedUs);
@@ -50,6 +60,7 @@ static void draw3D(double x1, double y1, double z1, double x2, double y2, double
     int center_x = 140;
     int center_y = 120;
 
+<<<<<<< HEAD
     if(z1 > 30 || z2 > 30)
     {
         drawLineFast((int)(center_x + x1*(DTS/(z1 + 0.01))),(int)(center_y + y1*(DTS/(z1 + 0.01)) - 20), (int)(center_x + x2*(DTS/(z2 + 0.01))), (int)(center_y + y1*(DTS/(z2 + 0.01)) - 20), c555);
@@ -174,10 +185,86 @@ static void move()
 
     sprintf(str, "%f", zSpeed);
     printf("zSpeed: %s\n", str);
+=======
+static void draw()
+{
+    int16_t xPos = (int)x;
+    int16_t yPos = (int)y;
+    fillDisplayArea(0, 0, 280, 240, c554);
+    fillDisplayArea(xPos, yPos, 45 + xPos, 45 + yPos, c050);
+}
+
+static void movement(double speed, double friction, double g)
+{
+    buttonEvt_t evt;
+    while (checkButtonQueueWrapper(&evt))
+    {
+        btnState = evt.state;
+        printf("state: %04X, button: %d, down: %s\n",
+               evt.state, evt.button, evt.down ? "down" : "up");
+    }
+
+    if (xVel > 0)
+    {
+        xVel -= friction;
+        if (xVel < 0)
+            xVel = 0;
+    }
+    else if (xVel < 0)
+    {
+        xVel += friction;
+        if (xVel > 0)
+            xVel = 0;
+    }
+    if (xVel > 3){
+        xVel = 3;
+    }
+    else if (xVel < -3){
+        xVel = -3;
+    }
+
+    if (btnState & PB_RIGHT)
+    {
+        xVel += speed;
+    }
+    if (btnState & PB_LEFT)
+    {
+        xVel -= speed;
+    }
+    if (btnState & PB_A && falling < 2)
+    {
+        y -= 1;
+        yVel = -8.2;
+    }
+
+    if (btnState & PB_B)
+    {
+        x = 0;
+        y = 0;
+        xVel = 0;
+        yVel = 0;
+    }
+
+    falling++;
+    if (y >= 100)
+    {
+        y = 100;
+        yVel = 0;
+        falling = 0;
+    }
+    else
+    {
+        yVel += g;
+    }
+
+    y += yVel;
+    x += xVel;
+>>>>>>> 6df04aee689e5e801591fe76f86ab25d58079214
 }
 
 static void foxMainLoop(int64_t elapsedUs)
 {
+<<<<<<< HEAD
     setFrameRateUs(fps);
 
     if(runner == true){
@@ -202,4 +289,8 @@ static void foxMainLoop(int64_t elapsedUs)
     }
 
     move();
+=======
+    movement(0.8, 0.3, 0.8);
+    draw();
+>>>>>>> 6df04aee689e5e801591fe76f86ab25d58079214
 }
