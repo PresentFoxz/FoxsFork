@@ -4,23 +4,29 @@
 static const char foxName[] = "Fox";
 static void foxMainLoop(int64_t elapsedUs);
 
+int fps = 1000000 / 30;
 uint16_t btnState;
 bool runner = true;
 
-/*
-Player variables
-*/
-int x1 = 0; int y1 = 100; int x1Speed = 0; int y1Speed = 0; int state1 = 0;
-int attackBoxes[2][4][4] = {
+int x1 = 0; 
+int y1 = 100;
+double x1Speed = 0;
+double y1Speed = 0; 
+int state1 = 0; 
+int falling1 = 0;
+
+int hitBoxes[2][4][4] = {
     {
-        {x1, y1, x1 + 10, y1}, 
-        {x1 + 10, y1, x1 + 10, y1 + 10}
-        {x1 + 10, y1 + 10, x1, y1 + 10}
-        {x1, y1 + 10, x1, y1}
-    }
+        {0, 0, 10, 0},
+        {10, 0, 10, 10},
+        {10, 10, 0, 10},
+        {0, 10, 0, 0}
+    },
     {
-        {0, 150, 280, 150}, {280, 150, 280, 240}, 
-        {280, 240, 0, 240}, {0, 240, 0, 150}
+        {0, 150, 280, 150},
+        {280, 150, 280, 240},
+        {280, 240, 0, 240},
+        {0, 240, 0, 150}
     }
 };
 
@@ -34,12 +40,12 @@ swadgeMode_t foxMode = {
     .fnMainLoop = foxMainLoop
 };
 
-static void debug(ab){
+static void debug(){
     for(int z = 0; z < 2; z++){
-        drawLineFast(ab[z][0][0], ab[z][0][1], ab[z][0][2], ab[z][0][3], c555);
-        drawLineFast(ab[z][1][0], ab[z][1][1], ab[z][1][2], ab[z][1][3], c555);
-        drawLineFast(ab[z][2][0], ab[z][2][1], ab[z][2][2], ab[z][2][3], c555);
-        drawLineFast(ab[z][3][0], ab[z][3][1], ab[z][3][2], ab[z][3][3], c555);
+        drawLineFast(int(hitBoxes[z][0][0] + x1), int(hitBoxes[z][0][1] + y1), int(hitBoxes[z][0][2] + x1), int(hitBoxes[z][0][3] + y1), c555);
+        drawLineFast(int(hitBoxes[z][1][0] + x1), int(hitBoxes[z][1][1] + y1), int(hitBoxes[z][1][2] + x1), int(hitBoxes[z][1][3] + y1), c555);
+        drawLineFast(int(hitBoxes[z][2][0] + x1), int(hitBoxes[z][2][1] + y1), int(hitBoxes[z][2][2] + x1), int(hitBoxes[z][2][3] + y1), c555);
+        drawLineFast(int(hitBoxes[z][3][0] + x1), int(hitBoxes[z][3][1] + y1), int(hitBoxes[z][3][2] + x1), int(hitBoxes[z][3][3] + y1), c555);
     }
 }
 
@@ -51,13 +57,9 @@ static void move() {
                evt.state, evt.button, evt.down ? "down" : "up");
     }
 
-    if (btnState & PB_UP && falling < 2) {
+    if (btnState & PB_UP && falling1 < 2) {
         y1Speed -= 5;
     }
-    /*
-    if (btnState & PB_DOWN) {
-    }
-    */
     if (btnState & PB_LEFT) {
         x1Speed -= 0.5;
     }
@@ -65,19 +67,33 @@ static void move() {
         x1Speed += 0.5;
     }
 
+    /*
+    if (btnState & PB_DOWN) {
+    }
+    */
+
     if ( y1 < 150 )
     {
         y1Speed += 0.5;
-        falling += 1;
+        falling1 += 1;
     }
     else if( y1 >= 150 ){
         y1 = 150;
         y1Speed = 0;
-        falling = 0;
+        falling1 = 0;
     }
 
-    x1 += x1Speed;
-    y1 += y1Speed;
+    if (x1Speed > 0.2)
+    {
+        x1Speed /= 1.5;
+    }
+    if (x1Speed < 0.2)
+    {
+        x1Speed /= 1.5;
+    }
+
+    x1 += int(x1Speed);
+    y1 += int(y1Speed);
 }
 
 static void foxMainLoop(int64_t elapsedUs)
@@ -88,6 +104,6 @@ static void foxMainLoop(int64_t elapsedUs)
         runner = false;
     }
     
-    colors = 2;
-    debug(attackBoxes);
+    move();
+    debug(hitBoxes);
 }
