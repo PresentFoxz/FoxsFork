@@ -1,0 +1,286 @@
+#include "fox_mesh.h"
+#include "fox_draw.h"
+
+#define FLT_MAX 3.402823466e+38F
+#define FLT_MIN -3.402823466e+38F
+
+Vec3f computeNormal(Vec3f tri[3]) {
+    Vec3f edge1, edge2;
+    edge1.x = tri[1].x - tri[0].x;
+    edge1.y = tri[1].y - tri[0].y;
+    edge1.z = tri[1].z - tri[0].z;
+
+    edge2.x = tri[2].x - tri[0].x;
+    edge2.y = tri[2].y - tri[0].y;
+    edge2.z = tri[2].z - tri[0].z;
+    
+    Vec3f normal;
+    normal.x = edge1.y * edge2.z - edge1.z * edge2.y;
+    normal.y = edge1.z * edge2.x - edge1.x * edge2.z;
+    normal.z = edge1.x * edge2.y - edge1.y * edge2.x;
+    
+    float len = fastsqrt(normal.x*normal.x + normal.y*normal.y + normal.z*normal.z);
+    if (len != 0.0f) {
+        normal.x /= len;
+        normal.y /= len;
+        normal.z /= len;
+    }
+
+    return normal;
+}
+
+void computeMeshBounds(Mesh *mesh) {
+    MeshBounds bounds = {
+        .min = { FLT_MAX, FLT_MAX, FLT_MAX },
+        .max = { -FLT_MAX, -FLT_MAX, -FLT_MAX }
+    };
+
+    for (uint32_t i = 0; i < mesh->vertCount; i++) {
+        Vec3f v = mesh->verts[i];
+        if (v.x < bounds.min.x) bounds.min.x = v.x;
+        if (v.y < bounds.min.y) bounds.min.y = v.y;
+        if (v.z < bounds.min.z) bounds.min.z = v.z;
+
+        if (v.x > bounds.max.x) bounds.max.x = v.x;
+        if (v.y > bounds.max.y) bounds.max.y = v.y;
+        if (v.z > bounds.max.z) bounds.max.z = v.z;
+    }
+
+    for (int i=0; i < 8; i++) {
+        mesh->aabb[i].x = (i & 1) ? bounds.max.x : bounds.min.x;
+        mesh->aabb[i].y = (i & 2) ? bounds.max.y : bounds.min.y;
+        mesh->aabb[i].z = (i & 4) ? bounds.max.z : bounds.min.z;
+    }
+
+    mesh->bounds = bounds;
+}
+
+void load_mesh(Mesh *meshModel, char *filename) {
+    #ifdef PLAYDATE_SDK
+    FileType *file = pd->file->open(filename, kFileRead | kFileReadData);
+    if(!file) {
+        pd->system->logToConsole("Failed to open %s\n", filename);
+        return;
+    }
+    #else
+    FileType *file = fopen(filename, "r");
+    if(!file) {
+        printf("Failed to open %s\n", filename);
+        return;
+    }
+    #endif
+
+    int verts = 0;
+    int tris = 0;
+
+    char line[128];
+    while(fox_fgets(line, sizeof(line), file)) {
+        if(line[0] == 'v') verts++;
+        if(line[0] == 'f') tris++;
+    }
+
+    #ifdef PLAYDATE_SDK
+    pd->file->seek(file, 0, SEEK_SET);
+    #else
+    rewind(file);
+    #endif
+
+    meshModel->vertCount = verts;
+    meshModel->triCount = tris;
+
+    meshModel->verts = fox_malloc(sizeof(Vec3f) * verts);
+    meshModel->tris = fox_malloc(sizeof(TriIndex) * tris);
+
+    int vi = 0;
+    int ti = 0;
+    while(fox_fgets(line, sizeof(line), file)) {
+        if(line[0] == 'v') {
+            float x,y,z;
+            sscanf(line, "v %f %f %f", &x, &y, &z);
+            meshModel->verts[vi++] = (Vec3f){x, y, z};
+        }
+
+
+        else if(line[0] == 'f') {
+            int t0, t1, t2;
+            int r, g, b, a;
+            int bfc;
+
+            int result = sscanf(
+                line,
+                "f %d %d %d %d %d %d %d %d",
+                &t0, &t1, &t2,
+                &r, &g, &b, &a,
+                &bfc
+            );
+
+            if(result != 8) {
+                printf("Invalid face: %s\n", line);
+                continue;
+            }
+
+            Color_t color = {
+                (uint8_t)r,
+                (uint8_t)g,
+                (uint8_t)b,
+                (uint8_t)a
+            };
+
+            meshModel->tris[ti].a = t0;
+            meshModel->tris[ti].b = t1;
+            meshModel->tris[ti].c = t2;
+
+            meshModel->tris[ti].color = color_to_pixel(color);
+            meshModel->tris[ti].bfc = bfc ? false : true;
+
+            Vec3f face[3] = { meshModel->verts[t0], meshModel->verts[t1], meshModel->verts[t2] };
+            meshModel->tris[ti].normal = computeNormal(face);
+            
+            float e1x = face[0].x - face[1].x;
+            float e1y = face[0].y - face[1].y;
+            float e1z = face[0].z - face[1].z;
+
+            float e2x = face[1].x - face[2].x;
+            float e2y = face[1].y - face[2].y;
+            float e2z = face[1].z - face[2].z;
+
+            float e3x = face[2].x - face[0].x;
+            float e3y = face[2].y - face[0].y;
+            float e3z = face[2].z - face[0].z;
+
+            float edge1 = e1x*e1x + e1y*e1y + e1z*e1z;
+            float edge2 = e2x*e2x + e2y*e2y + e2z*e2z;
+            float edge3 = e3x*e3x + e3y*e3y + e3z*e3z;
+
+            float biggestEdge = fmaxf(edge1, fmaxf(edge2, edge3));
+            meshModel->tris[ti].size = (biggestEdge > 4.0f);
+            ti++;
+        }
+    }
+
+    computeMeshBounds(meshModel);
+    
+    #ifdef PLAYDATE_SDK
+    pd->file->close(file);
+    pd->system->logToConsole("Grabbed Mesh: %s | Tri Count: %d\n", filename, meshModel->triCount);
+    #else
+    fclose(file);
+    printf("Grabbed Mesh: %s | Tri Count: %d\n", filename, meshModel->triCount);
+    #endif
+}
+
+void load_animation(MeshAnimations *animatedModel, char *filename) {
+    if (!animatedModel || !filename) return;
+
+    animatedModel->ModelAnimations = NULL;
+    animatedModel->frameCounts = NULL;
+    animatedModel->animations = 0;
+
+    #ifdef PLAYDATE_SDK
+    FileType *file = pd->file->open(filename, kFileRead | kFileReadData);
+    if(!file) {
+        pd->system->logToConsole("Failed to open %s\n", filename);
+        return;
+    }
+    #else
+    FileType *file = fopen(filename, "r");
+    if(!file) {
+        printf("Failed to open %s\n", filename);
+        return;
+    }
+    #endif
+
+    char line[128];
+    int animCount = 0;
+    while(fox_fgets(line, sizeof(line), file)) {
+        if (sscanf(line, "Animations %d", &animCount) == 1) break;
+    }
+
+    if (animCount <= 0) {
+        #ifdef PLAYDATE_SDK
+        pd->system->logToConsole("No animations found in: %s\n", filename);
+        pd->file->close(file);
+        #else
+        printf("No animations found in: %s\n", filename);
+        fclose(file);
+        #endif
+        return;
+    }
+
+    #ifdef PLAYDATE_SDK
+    pd->file->seek(file, 0, SEEK_SET);
+    #else
+    rewind(file);
+    #endif
+
+    animatedModel->ModelAnimations = fox_malloc(sizeof(MeshFrame *) * animCount);
+    animatedModel->frameCounts = fox_malloc(sizeof(int) * animCount);
+
+    if (!animatedModel->ModelAnimations || !animatedModel->frameCounts) {
+        fox_free(animatedModel->ModelAnimations);
+        fox_free(animatedModel->frameCounts);
+
+        #ifdef PLAYDATE_SDK
+        pd->file->close(file);
+        #else
+        fclose(file);
+        #endif
+
+        return;
+    }
+
+    animatedModel->animations = animCount;
+
+    for (int i = 0; i < animCount; i++) {
+        animatedModel->ModelAnimations[i] = NULL;
+        animatedModel->frameCounts[i] = 0;
+    }
+
+    int animIndex = -1;
+    int currFrame = 0;
+    while(fox_fgets(line, sizeof(line), file)) {
+        int frameCount;
+
+        if (sscanf(line, "StartAnim %d", &frameCount) == 1) {
+            animIndex++;
+            if (animIndex >= animCount || frameCount <= 0) break;
+
+            animatedModel->ModelAnimations[animIndex] = fox_malloc(sizeof(MeshFrame) * frameCount);
+
+            if (!animatedModel->ModelAnimations[animIndex]) break;
+            animatedModel->frameCounts[animIndex] = frameCount;
+            currFrame = 0;
+
+            for (int i=0; i < frameCount; i++) {
+                animatedModel->ModelAnimations[animIndex][i] = (MeshFrame){0};
+            }
+
+            continue;
+        }
+
+        if (strncmp(line, "EndAnim", 7) == 0) {
+            currFrame = 0;
+            continue;
+        }
+
+        char modelFile[256];
+        int heldFrameCount;
+        if (sscanf(line, "Frame %256s %d", modelFile, &heldFrameCount) == 2) {
+            if (animIndex < 0 || animIndex >= animCount || currFrame >= animatedModel->frameCounts[animIndex]) continue;
+
+            MeshFrame *frame = &animatedModel->ModelAnimations[animIndex][currFrame];
+            frame->heldFrameCount = heldFrameCount;
+
+            load_mesh(&frame->ModelFrame, modelFile);
+
+            currFrame++;
+            continue;
+        }
+    }
+
+    #ifdef PLAYDATE_SDK
+    pd->file->close(file);
+    #else
+    fclose(file);
+    #endif
+}

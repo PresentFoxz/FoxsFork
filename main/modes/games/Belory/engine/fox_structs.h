@@ -1,0 +1,105 @@
+#ifndef FOX_STRUCTS_H
+#define FOX_STRUCTS_H
+
+#include <stdint.h>
+
+typedef struct {
+    float x, y;
+} Vec2f;
+
+typedef struct {
+    float x, y, z;
+} Vec3f;
+
+typedef struct {
+    float x, y, z, w;
+} Vec4;
+
+typedef struct {
+    int x, y;
+} Vec2i;
+
+typedef struct {
+    int x, y, z;
+} Vec3i;
+
+typedef struct {
+    float x[3][3];
+} Mat3x3;
+
+typedef struct {
+    float x[4][4];
+} Mat4x4;
+
+typedef struct {
+    Vec4 row;
+} Plane4;
+
+typedef struct {
+    int width;
+    int height;
+    int8_t *pixels;
+} Screen;
+
+#ifdef PLATFORM_WIN
+typedef struct {
+    bool up;
+    bool down;
+    bool left;
+    bool right;
+    bool jump;
+    bool crouch;
+
+    bool pause;
+    bool just_pause;
+
+    bool just_up;
+    bool just_down;
+    bool just_left;
+    bool just_right;
+    bool just_jump;
+    bool just_crouch;
+
+    bool MB1;
+    bool MB2;
+    bool just_MB1;
+    bool just_MB2;
+} KeyInputs;
+#endif
+
+typedef struct {
+    Vec3f pos;
+    Vec3f rot;
+
+    float fov, nearPlane, farPlane;
+    float renderRadiusSq;
+    float focal;
+    Mat3x3 matrix;
+
+    int prevCrank;
+    Plane4 planesW[6];
+    Plane4 planesL[6];
+} Camera_t;
+
+typedef struct {
+    Vec3f pos;
+    Vec3f rot;
+    Vec3f size;
+
+    Mat3x3 matrix;
+
+    Vec3f fVect;
+    Vec3f moveVect;
+    Vec3f velocity;
+
+    int modelID;
+    int currentAnim;
+    int currentFrame;
+    float distMod;
+} Objects_t;
+
+typedef struct {
+    uint8_t r, g, b, a;
+} Color_t;
+
+#endif

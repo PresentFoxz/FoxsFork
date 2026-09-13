@@ -1,0 +1,8 @@
+& "C:\Users\vcapr\esp\esp-idf-swadge\export.ps1"
+cd "$HOME\esp\Super-2024-Swadge-FW"
+idf.py -p COM8 -b 2000000 build flash
+
+cd "C:\Users\vcapr\esp\Super-2024-Swadge-FW"
+make clean all
+
+./swadge_emulator.exe --mode "Main Menu" -t

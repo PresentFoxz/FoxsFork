@@ -53,6 +53,7 @@
 #include "trophyCase.h"
 #include "trophyTest.h"
 #include "tunernome.h"
+#include "belory.h"
 
 //==============================================================================
 // Function Prototypes
