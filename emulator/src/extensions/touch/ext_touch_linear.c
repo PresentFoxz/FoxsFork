@@ -119,20 +119,16 @@ static bool updateTouchLinear(emuTouch_t* et, int32_t x, int32_t y, mouseButton_
 {
     if (isInBounds(et, &x, &y))
     {
+
+        uint32_t isLeft = et->isLeft ? 0 : 1;
+
         // Update click state
         if ((EMU_MOUSE_LEFT == clicked) || (EMU_MOUSE_RIGHT == clicked))
         {
             // Update mouse state
             et->clickState = (EMU_MOUSE_LEFT == clicked) ? LEFT_CLICKED : RIGHT_CLICKED;
             // Pressed down
-            if (et->isLeft)
-            {
-                emulatorSetTouchLinear(0, (et->mouseY * 1024) / et->paneH, et->intensity);
-            }
-            else
-            {
-                emulatorSetTouchLinear(1, (et->mouseY * 1024) / et->paneH, et->intensity);
-            }
+            emulatorSetTouchLinear(isLeft, (et->mouseY * 1024) / et->paneH, et->intensity);
         }
         else if (EMU_MOUSE_NONE == clicked)
         {
@@ -141,7 +137,7 @@ static bool updateTouchLinear(emuTouch_t* et, int32_t x, int32_t y, mouseButton_
                 // Update mouse state
                 et->clickState = LEFT_RELEASED;
                 // Release
-                emulatorSetTouchLinear(et->isLeft ? 0 : 1, 0, 0);
+                emulatorSetTouchLinear(isLeft, 0, 0);
             }
             else if (RIGHT_CLICKED == et->clickState)
             {
